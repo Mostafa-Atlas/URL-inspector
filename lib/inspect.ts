@@ -77,6 +77,11 @@ export function isBlockedHostname(host: string): boolean {
   return false;
 }
 
+function allowPrivate(): boolean {
+  // test-only bypass so local servers can be inspected
+  return process.env.ALLOW_PRIVATE === '1';
+}
+
 export function parseTarget(input: string): URL {
   let u: URL;
   try {
@@ -91,16 +96,19 @@ export function parseTarget(input: string): URL {
     throw new InspectError(400, 'Invalid URL');
   }
   if (!u.hostname) throw new InspectError(400, 'Invalid URL');
-  if (isBlockedHostname(u.hostname)) {
-    throw new InspectError(403, 'The destination is not allowed.');
-  }
-  if (net.isIP(u.hostname) && isPrivateIP(u.hostname)) {
-    throw new InspectError(403, 'The destination is not allowed.');
+  if (!allowPrivate()) {
+    if (isBlockedHostname(u.hostname)) {
+      throw new InspectError(403, 'The destination is not allowed.');
+    }
+    if (net.isIP(u.hostname) && isPrivateIP(u.hostname)) {
+      throw new InspectError(403, 'The destination is not allowed.');
+    }
   }
   return u;
 }
 
 export async function assertSafeHost(hostname: string): Promise<void> {
+  if (allowPrivate()) return;
   if (isBlockedHostname(hostname)) {
     throw new InspectError(403, 'The destination is not allowed.');
   }
