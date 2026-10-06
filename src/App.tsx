@@ -19,9 +19,11 @@ export default function App() {
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [touched, setTouched] = useState(false);
 
   async function onInspect(e: React.FormEvent) {
     e.preventDefault();
+    setTouched(true);
     setLoading(true);
     setError(null);
     setResult(null);
@@ -57,14 +59,22 @@ export default function App() {
         </button>
       </form>
 
-      {error && <p className="error">{error}</p>}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      {loading && <p className="hint">Inspecting…</p>}
+      {!touched && !result && !error && !loading && (
+        <p className="hint">Enter a URL above and hit Inspect to see status, timing, and headers.</p>
+      )}
 
       {result && (
-        <section className="card">
+        <section className="card" aria-live="polite">
           <div className="grid">
             <div>
               <span>Status</span>
-              <strong>
+              <strong className={result.ok ? 'ok' : 'bad'}>
                 {result.status} {result.statusText}
               </strong>
             </div>
@@ -78,7 +88,11 @@ export default function App() {
             </div>
             <div>
               <span>Size</span>
-              <strong>{(result.sizeBytes / 1024).toFixed(1)} KB</strong>
+              <strong>
+                {result.sizeBytes < 1024
+                  ? `${result.sizeBytes} B`
+                  : `${(result.sizeBytes / 1024).toFixed(1)} KB`}
+              </strong>
             </div>
             <div>
               <span>Redirects</span>

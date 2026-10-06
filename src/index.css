@@ -4,9 +4,13 @@
   background: #fff;
 }
 .wrap {
-  max-width: 640px;
+  max-width: 680px;
   margin: 48px auto;
   padding: 0 16px;
+  line-height: 1.5;
+}
+h1 {
+  margin-bottom: 4px;
 }
 .row {
   display: flex;
@@ -57,6 +61,21 @@ button {
 }
 .error {
   color: #a00;
+  background: #fdecec;
+  border: 1px solid #f5c2c2;
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+.ok {
+  color: #0a6b2a;
+}
+.bad {
+  color: #a00;
+}
+code {
+  background: #f4f4f4;
+  padding: 1px 4px;
+  border-radius: 4px;
 }
 @media (max-width: 520px) {
   .grid {
