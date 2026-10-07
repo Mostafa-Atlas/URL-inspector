@@ -17,6 +17,15 @@ interface Result {
   previewText: string | null;
   previewTruncated: boolean;
   pageTitle: string | null;
+  security: { name: string; present: boolean; value: string | null }[];
+  caching: {
+    cacheControl: string | null;
+    etag: string | null;
+    age: string | null;
+    expires: string | null;
+    contentEncoding: string | null;
+  };
+  cookies: string[];
 }
 
 function fmtSize(n: number): string {
@@ -165,6 +174,50 @@ export default function App() {
               <pre className="headers">{result.previewText}</pre>
               {result.previewTruncated && <p className="hint">Truncated to first 2 KB.</p>}
             </>
+          )}
+
+          <h2>Security headers</h2>
+          <ul className="checks">
+            {result.security.map((h) => (
+              <li key={h.name}>
+                <span className={h.present ? 'good' : 'missing'}>{h.present ? 'Yes' : 'No'}</span>{' '}
+                <code>{h.name}</code>
+                {h.present && h.value && <span className="hint"> — {h.value.slice(0, 80)}</span>}
+              </li>
+            ))}
+          </ul>
+
+          <h2>Caching and compression</h2>
+          <div className="grid">
+            <div>
+              <span>Cache-Control</span>
+              <strong>{result.caching.cacheControl || '—'}</strong>
+            </div>
+            <div>
+              <span>ETag</span>
+              <strong>{result.caching.etag || '—'}</strong>
+            </div>
+            <div>
+              <span>Age / Expires</span>
+              <strong>{result.caching.age || result.caching.expires || '—'}</strong>
+            </div>
+            <div>
+              <span>Encoding</span>
+              <strong>{result.caching.contentEncoding || '—'}</strong>
+            </div>
+          </div>
+
+          <h2>Cookies ({result.cookies.length})</h2>
+          {result.cookies.length === 0 ? (
+            <p className="hint">None set.</p>
+          ) : (
+            <ul className="checks">
+              {result.cookies.map((c, i) => (
+                <li key={i}>
+                  <code>{c.split(';')[0].trim()}</code>
+                </li>
+              ))}
+            </ul>
           )}
 
           <h2>Response Headers</h2>

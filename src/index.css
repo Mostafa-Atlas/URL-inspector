@@ -127,6 +127,24 @@ h2 {
 .chain li {
   margin: 4px 0;
 }
+.checks {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+  font-size: 14px;
+}
+.checks li {
+  margin: 4px 0;
+  word-break: break-all;
+}
+.good {
+  color: #0a6b2a;
+  font-weight: 600;
+}
+.missing {
+  color: #a00;
+  font-weight: 600;
+}
 code {
   background: #f4f4f4;
   padding: 1px 4px;

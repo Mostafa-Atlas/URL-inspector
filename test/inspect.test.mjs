@@ -1,7 +1,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { inspectUrl, parseTarget, isPrivateIP, MAX_BYTES } from '../lib/inspect.ts';
+import { inspectUrl, parseTarget, isPrivateIP, securityHeaders, MAX_BYTES } from '../lib/inspect.ts';
 
 process.env.ALLOW_PRIVATE = '1';
 
@@ -16,6 +16,7 @@ before(async () => {
   ok = await listen((req, res) => {
     res.setHeader('content-type', 'text/plain');
     res.setHeader('server', 'test');
+    res.setHeader('set-cookie', 'sid=abc; Path=/');
     res.end('hello');
   });
   json = await listen((req, res) => {
@@ -63,6 +64,12 @@ describe('validation', () => {
     }
     process.env.ALLOW_PRIVATE = '1';
   });
+  it('flags missing security headers', () => {
+    const s = securityHeaders({ 'x-frame-options': 'DENY' });
+    assert.equal(s.length, 5);
+    assert.equal(s.find((h) => h.name === 'x-frame-options').present, true);
+    assert.equal(s.find((h) => h.name === 'content-security-policy').present, false);
+  });
   it('detects private ips', () => {
     assert.equal(isPrivateIP('127.0.0.1'), true);
     assert.equal(isPrivateIP('10.1.2.3'), true);
@@ -87,6 +94,9 @@ describe('inspect', () => {
     assert.equal(r.timing.totalMs, r.responseTimeMs);
     assert.equal(r.previewText, 'hello');
     assert.equal(r.previewTruncated, false);
+    assert.equal(r.security.length, 5);
+    assert.ok(r.caching);
+    assert.ok(r.cookies.some((c) => c.startsWith('sid=abc')));
   });
   it('pretty-prints json preview', async () => {
     const r = await inspectUrl(`${addr(json)}/`);

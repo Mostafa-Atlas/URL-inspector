@@ -13,6 +13,20 @@ export interface RedirectHop {
   status: number;
 }
 
+export interface SecurityHeader {
+  name: string;
+  present: boolean;
+  value: string | null;
+}
+
+export interface Caching {
+  cacheControl: string | null;
+  etag: string | null;
+  age: string | null;
+  expires: string | null;
+  contentEncoding: string | null;
+}
+
 export interface InspectResult {
   url: string;
   finalUrl: string;
@@ -30,6 +44,9 @@ export interface InspectResult {
   previewText: string | null;
   previewTruncated: boolean;
   pageTitle: string | null;
+  security: SecurityHeader[];
+  caching: Caching;
+  cookies: string[];
 }
 
 export class InspectError extends Error {
@@ -93,6 +110,32 @@ export function isBlockedHostname(host: string): boolean {
   if (h.endsWith('.local') || h.endsWith('.internal') || h.endsWith('.lan')) return true;
   if (h === 'metadata.google.internal') return true;
   return false;
+}
+
+const SECURITY_HEADERS = [
+  'strict-transport-security',
+  'content-security-policy',
+  'x-frame-options',
+  'x-content-type-options',
+  'referrer-policy',
+];
+
+export function securityHeaders(headers: Record<string, string>): SecurityHeader[] {
+  return SECURITY_HEADERS.map((name) => ({
+    name,
+    present: name in headers,
+    value: headers[name] ?? null,
+  }));
+}
+
+function getCookies(res: Response, headers: Record<string, string>): string[] {
+  const withMethod = res.headers as unknown as { getSetCookie?: () => string[] };
+  if (typeof withMethod.getSetCookie === 'function') {
+    return withMethod.getSetCookie();
+  }
+  const raw = headers['set-cookie'];
+  if (!raw) return [];
+  return [raw];
 }
 
 function allowPrivate(): boolean {
@@ -301,5 +344,14 @@ export async function inspectUrl(input: string): Promise<InspectResult> {
     previewText,
     previewTruncated,
     pageTitle,
+    security: securityHeaders(headers),
+    caching: {
+      cacheControl: headers['cache-control'] ?? null,
+      etag: headers['etag'] ?? null,
+      age: headers['age'] ?? null,
+      expires: headers['expires'] ?? null,
+      contentEncoding: headers['content-encoding'] ?? null,
+    },
+    cookies: getCookies(res, headers),
   };
 }
