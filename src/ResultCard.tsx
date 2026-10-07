@@ -1,0 +1,227 @@
+export interface Result {
+  url: string;
+  finalUrl: string;
+  method: string;
+  status: number;
+  statusText: string;
+  ok: boolean;
+  responseTimeMs: number;
+  timing: { dnsMs: number; ttfbMs: number; bodyMs: number; totalMs: number };
+  redirectCount: number;
+  redirects: { url: string; status: number }[];
+  contentType: string | null;
+  sizeBytes: number;
+  server: string | null;
+  headers: Record<string, string>;
+  previewText: string | null;
+  previewTruncated: boolean;
+  pageTitle: string | null;
+  security: { name: string; present: boolean; value: string | null }[];
+  caching: {
+    cacheControl: string | null;
+    etag: string | null;
+    age: string | null;
+    expires: string | null;
+    contentEncoding: string | null;
+  };
+  cookies: string[];
+  cert: {
+    subject: string;
+    issuer: string;
+    validFrom: string;
+    validTo: string;
+    daysLeft: number;
+  } | null;
+}
+
+export function fmtSize(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function Bar({ label, ms, total }: { label: string; ms: number; total: number }) {
+  const pct = total > 0 ? Math.max(2, Math.round((ms / total) * 100)) : 0;
+  return (
+    <div className="bar-row">
+      <span className="bar-label">{label}</span>
+      <div className="bar-track">
+        <div className="bar-fill" style={{ width: `${pct}%` }} />
+      </div>
+      <span className="bar-ms">{ms} ms</span>
+    </div>
+  );
+}
+
+export interface Diff {
+  label: string;
+  a: string;
+  b: string;
+}
+
+export function diffResults(a: Result, b: Result): Diff[] {
+  const rows: [string, string, string][] = [
+    ['Status', `${a.status} ${a.statusText}`, `${b.status} ${b.statusText}`],
+    ['Content-Type', a.contentType || '—', b.contentType || '—'],
+    ['Server', a.server || '—', b.server || '—'],
+    ['Size', fmtSize(a.sizeBytes), fmtSize(b.sizeBytes)],
+    ['Redirects', String(a.redirectCount), String(b.redirectCount)],
+    ['Page title', a.pageTitle || '—', b.pageTitle || '—'],
+  ];
+  return rows.filter(([, x, y]) => x !== y).map(([label, ax, bx]) => ({ label, a: ax, b: bx }));
+}
+
+export function ResultCard({ result, title }: { result: Result; title?: string }) {
+  const t = result.timing;
+  return (
+    <section className="card" aria-live="polite">
+      {title && <h2 className="card-title">{title}</h2>}
+      <p className={`badge ${result.ok ? 'ok' : 'bad'}`}>
+        {result.status} {result.statusText}
+      </p>
+      <div className="grid">
+        <div>
+          <span>Method</span>
+          <strong>{result.method}</strong>
+        </div>
+        <div>
+          <span>Response</span>
+          <strong>{result.responseTimeMs} ms</strong>
+        </div>
+        <div>
+          <span>Content-Type</span>
+          <strong>{result.contentType || '—'}</strong>
+        </div>
+        <div>
+          <span>Size</span>
+          <strong>{fmtSize(result.sizeBytes)}</strong>
+        </div>
+        <div>
+          <span>Redirects</span>
+          <strong>{result.redirectCount}</strong>
+        </div>
+        <div>
+          <span>Server</span>
+          <strong>{result.server || '—'}</strong>
+        </div>
+        <div>
+          <span>Page title</span>
+          <strong>{result.pageTitle || '—'}</strong>
+        </div>
+      </div>
+
+      <h2>Timing</h2>
+      <Bar label="DNS lookup" ms={t.dnsMs} total={t.totalMs} />
+      <Bar label="Wait for headers" ms={t.ttfbMs} total={t.totalMs} />
+      <Bar label="Download body" ms={t.bodyMs} total={t.totalMs} />
+      <Bar label="Total" ms={t.totalMs} total={t.totalMs} />
+
+      <p className="urls">
+        Request: <code>{result.url}</code>
+        <br />
+        Final: <code>{result.finalUrl}</code>
+      </p>
+
+      <h2>Redirects</h2>
+      {result.redirects.length === 0 ? (
+        <p className="hint">Direct, no redirects.</p>
+      ) : (
+        <ol className="chain">
+          {result.redirects.map((h, i) => (
+            <li key={i}>
+              <code>{h.status}</code> <code>{h.url}</code>
+            </li>
+          ))}
+          <li>
+            <code>{result.status}</code> <code>{result.finalUrl}</code>
+          </li>
+        </ol>
+      )}
+
+      {result.previewText && (
+        <>
+          <h2>Body preview</h2>
+          <pre className="headers">{result.previewText}</pre>
+          {result.previewTruncated && <p className="hint">Truncated to first 2 KB.</p>}
+        </>
+      )}
+
+      <h2>Security headers</h2>
+      <ul className="checks">
+        {result.security.map((h) => (
+          <li key={h.name}>
+            <span className={h.present ? 'good' : 'missing'}>{h.present ? 'Yes' : 'No'}</span>{' '}
+            <code>{h.name}</code>
+            {h.present && h.value && <span className="hint"> — {h.value.slice(0, 80)}</span>}
+          </li>
+        ))}
+      </ul>
+
+      <h2>Caching and compression</h2>
+      <div className="grid">
+        <div>
+          <span>Cache-Control</span>
+          <strong>{result.caching.cacheControl || '—'}</strong>
+        </div>
+        <div>
+          <span>ETag</span>
+          <strong>{result.caching.etag || '—'}</strong>
+        </div>
+        <div>
+          <span>Age / Expires</span>
+          <strong>{result.caching.age || result.caching.expires || '—'}</strong>
+        </div>
+        <div>
+          <span>Encoding</span>
+          <strong>{result.caching.contentEncoding || '—'}</strong>
+        </div>
+      </div>
+
+      <h2>Cookies ({result.cookies.length})</h2>
+      {result.cookies.length === 0 ? (
+        <p className="hint">None set.</p>
+      ) : (
+        <ul className="checks">
+          {result.cookies.map((c, i) => (
+            <li key={i}>
+              <code>{c.split(';')[0].trim()}</code>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {result.cert && (
+        <>
+          <h2>Certificate</h2>
+          <div className="grid">
+            <div>
+              <span>Subject</span>
+              <strong>{result.cert.subject}</strong>
+            </div>
+            <div>
+              <span>Issuer</span>
+              <strong>{result.cert.issuer}</strong>
+            </div>
+            <div>
+              <span>Expires</span>
+              <strong>{result.cert.validTo}</strong>
+            </div>
+            <div>
+              <span>Days left</span>
+              <strong className={result.cert.daysLeft < 30 ? 'missing' : 'good'}>
+                {result.cert.daysLeft}
+              </strong>
+            </div>
+          </div>
+        </>
+      )}
+
+      <h2>Response Headers</h2>
+      <pre className="headers">
+        {Object.entries(result.headers)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join('\n')}
+      </pre>
+    </section>
+  );
+}
