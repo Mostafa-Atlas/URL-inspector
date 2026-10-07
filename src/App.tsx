@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ResultCard, diffResults, type Result } from './ResultCard';
+import { ExportButtons } from './export';
 
 function parseHeaderLines(text: string): Record<string, string> {
   const out: Record<string, string> = {};
@@ -46,6 +47,27 @@ export default function App() {
   const [error2, setError2] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState(false);
+  const ranShared = useRef(false);
+
+  useEffect(() => {
+    if (ranShared.current) return;
+    ranShared.current = true;
+    const q = new URLSearchParams(location.search);
+    const shared = q.get('url');
+    if (!shared) return;
+    const m = (q.get('method') || 'GET').toUpperCase();
+    setUrl(shared);
+    setMethod(m);
+    setTouched(true);
+    setLoading(true);
+    fetchInspect(shared, { method: m, headers: {}, body: '' })
+      .then(({ ok, data }) => {
+        if (ok) setResult(data as Result);
+        else setError(data.error || 'Something went wrong.');
+      })
+      .catch(() => setError('The server could not reach this address.'))
+      .finally(() => setLoading(false));
+  }, []);
 
   async function runOne(target: string) {
     const { ok, data } = await fetchInspect(target, {
@@ -195,11 +217,37 @@ export default function App() {
         <p className="hint">Both URLs return the same status, type, server, size, redirects, and title.</p>
       )}
 
-      {mode === 'single' && result && <ResultCard result={result} />}
+      {mode === 'single' && result && (
+        <>
+          <ResultCard result={result} />
+          <ExportButtons
+            result={result}
+            method={method}
+            headers={parseHeaderLines(headerText)}
+            body={bodyText}
+          />
+        </>
+      )}
       {mode === 'compare' && result && result2 && (
         <div className="compare">
-          <ResultCard result={result} title="A" />
-          <ResultCard result={result2} title="B" />
+          <div>
+            <ResultCard result={result} title="A" />
+            <ExportButtons
+              result={result}
+              method={method}
+              headers={parseHeaderLines(headerText)}
+              body={bodyText}
+            />
+          </div>
+          <div>
+            <ResultCard result={result2} title="B" />
+            <ExportButtons
+              result={result2}
+              method={method}
+              headers={parseHeaderLines(headerText)}
+              body={bodyText}
+            />
+          </div>
         </div>
       )}
       {mode === 'compare' && result && !result2 && !loading && <ResultCard result={result} title="A" />}
