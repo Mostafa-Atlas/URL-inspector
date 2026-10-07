@@ -66,11 +66,58 @@ button {
   padding: 10px 12px;
   border-radius: 6px;
 }
-.ok {
-  color: #0a6b2a;
+.badge {
+  display: inline-block;
+  margin: 0 0 16px;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-weight: 600;
+  border: 1px solid #ddd;
+  background: #f6f6f6;
 }
-.bad {
+.badge.ok {
+  color: #0a6b2a;
+  border-color: #bfe3cd;
+  background: #eef7f1;
+}
+.badge.bad {
   color: #a00;
+  border-color: #f5c2c2;
+  background: #fdecec;
+}
+h2 {
+  font-size: 16px;
+  margin: 24px 0 8px;
+}
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.bar-label {
+  width: 128px;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: #444;
+}
+.bar-track {
+  flex: 1;
+  height: 8px;
+  background: #eee;
+  border-radius: 4px;
+}
+.bar-fill {
+  height: 8px;
+  background: #333;
+  border-radius: 4px;
+}
+.bar-ms {
+  width: 64px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 code {
   background: #f4f4f4;

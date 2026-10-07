@@ -6,7 +6,7 @@ I built it as a personal demo I can actually maintain. No accounts, no database,
 
 ## Features
 
-Shows status code, response time, content type, size, redirect count, server header when present, final URL after redirects, and the full response headers. Errors are plain sentences like "Invalid URL" or "The request timed out."
+Shows status code, timing breakdown (DNS lookup, wait for headers, body download, total), content type, size, redirect count, server header when present, page title and a 2 KB body preview for text pages, final URL after redirects, and the full response headers. Errors are plain sentences like "Invalid URL" or "The request timed out."
 
 ## Run locally
 

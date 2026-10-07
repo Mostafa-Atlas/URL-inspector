@@ -7,11 +7,34 @@ interface Result {
   statusText: string;
   ok: boolean;
   responseTimeMs: number;
+  timing: { dnsMs: number; ttfbMs: number; bodyMs: number; totalMs: number };
   redirectCount: number;
   contentType: string | null;
   sizeBytes: number;
   server: string | null;
   headers: Record<string, string>;
+  previewText: string | null;
+  previewTruncated: boolean;
+  pageTitle: string | null;
+}
+
+function fmtSize(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function Bar({ label, ms, total }: { label: string; ms: number; total: number }) {
+  const pct = total > 0 ? Math.max(2, Math.round((ms / total) * 100)) : 0;
+  return (
+    <div className="bar-row">
+      <span className="bar-label">{label}</span>
+      <div className="bar-track">
+        <div className="bar-fill" style={{ width: `${pct}%` }} />
+      </div>
+      <span className="bar-ms">{ms} ms</span>
+    </div>
+  );
 }
 
 export default function App() {
@@ -42,6 +65,8 @@ export default function App() {
     }
   }
 
+  const t = result?.timing;
+
   return (
     <main className="wrap">
       <h1>HTTP Inspector</h1>
@@ -71,13 +96,10 @@ export default function App() {
 
       {result && (
         <section className="card" aria-live="polite">
+          <p className={`badge ${result.ok ? 'ok' : 'bad'}`}>
+            {result.status} {result.statusText}
+          </p>
           <div className="grid">
-            <div>
-              <span>Status</span>
-              <strong className={result.ok ? 'ok' : 'bad'}>
-                {result.status} {result.statusText}
-              </strong>
-            </div>
             <div>
               <span>Response</span>
               <strong>{result.responseTimeMs} ms</strong>
@@ -88,11 +110,7 @@ export default function App() {
             </div>
             <div>
               <span>Size</span>
-              <strong>
-                {result.sizeBytes < 1024
-                  ? `${result.sizeBytes} B`
-                  : `${(result.sizeBytes / 1024).toFixed(1)} KB`}
-              </strong>
+              <strong>{fmtSize(result.sizeBytes)}</strong>
             </div>
             <div>
               <span>Redirects</span>
@@ -102,12 +120,36 @@ export default function App() {
               <span>Server</span>
               <strong>{result.server || '—'}</strong>
             </div>
+            <div>
+              <span>Page title</span>
+              <strong>{result.pageTitle || '—'}</strong>
+            </div>
           </div>
+
+          {t && (
+            <>
+              <h2>Timing</h2>
+              <Bar label="DNS lookup" ms={t.dnsMs} total={t.totalMs} />
+              <Bar label="Wait for headers" ms={t.ttfbMs} total={t.totalMs} />
+              <Bar label="Download body" ms={t.bodyMs} total={t.totalMs} />
+              <Bar label="Total" ms={t.totalMs} total={t.totalMs} />
+            </>
+          )}
+
           <p className="urls">
             Request: <code>{result.url}</code>
             <br />
             Final: <code>{result.finalUrl}</code>
           </p>
+
+          {result.previewText && (
+            <>
+              <h2>Body preview</h2>
+              <pre className="headers">{result.previewText}</pre>
+              {result.previewTruncated && <p className="hint">Truncated to first 2 KB.</p>}
+            </>
+          )}
+
           <h2>Response Headers</h2>
           <pre className="headers">
             {Object.entries(result.headers)
