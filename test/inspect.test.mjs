@@ -11,12 +11,20 @@ function listen(handler) {
 }
 const addr = (s) => `http://127.0.0.1:${s.address().port}`;
 
-let ok, redir, big, slow;
+let ok, redir, big, slow, json, html;
 before(async () => {
   ok = await listen((req, res) => {
     res.setHeader('content-type', 'text/plain');
     res.setHeader('server', 'test');
     res.end('hello');
+  });
+  json = await listen((req, res) => {
+    res.setHeader('content-type', 'application/json');
+    res.end(JSON.stringify({ b: 2, a: 1 }));
+  });
+  html = await listen((req, res) => {
+    res.setHeader('content-type', 'text/html');
+    res.end('<html><head><title>My Page</title></head><body>hi</body></html>');
   });
   redir = await listen((req, res) => {
     if (req.url === '/final') {
@@ -34,7 +42,7 @@ before(async () => {
   slow = await listen(() => {});
 });
 after(() => {
-  for (const s of [ok, redir, big, slow]) s.close();
+  for (const s of [ok, redir, big, slow, json, html]) s.close();
 });
 
 describe('validation', () => {
@@ -77,6 +85,16 @@ describe('inspect', () => {
     assert.ok(r.timing.ttfbMs >= 0);
     assert.ok(r.timing.bodyMs >= 0);
     assert.equal(r.timing.totalMs, r.responseTimeMs);
+    assert.equal(r.previewText, 'hello');
+    assert.equal(r.previewTruncated, false);
+  });
+  it('pretty-prints json preview', async () => {
+    const r = await inspectUrl(`${addr(json)}/`);
+    assert.ok(r.previewText.includes('"a": 1'));
+  });
+  it('extracts html title', async () => {
+    const r = await inspectUrl(`${addr(html)}/`);
+    assert.equal(r.pageTitle, 'My Page');
   });
   it('follows redirects', async () => {
     const r = await inspectUrl(`${addr(redir)}/`);

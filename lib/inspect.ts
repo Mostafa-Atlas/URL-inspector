@@ -21,6 +21,9 @@ export interface InspectResult {
   sizeBytes: number;
   server: string | null;
   headers: Record<string, string>;
+  previewText: string | null;
+  previewTruncated: boolean;
+  pageTitle: string | null;
 }
 
 export class InspectError extends Error {
@@ -36,6 +39,7 @@ export class InspectError extends Error {
 export const MAX_REDIRECTS = 5;
 export const TIMEOUT_MS = 10_000;
 export const MAX_BYTES = 2_000_000;
+export const PREVIEW_BYTES = 2048;
 
 function ipv4ToInt(ip: string): number {
   const p = ip.split('.').map(Number);
@@ -138,13 +142,23 @@ export async function assertSafeHost(hostname: string): Promise<void> {
   }
 }
 
-async function readWithLimit(res: Response): Promise<number> {
+async function readWithLimit(res: Response): Promise<{ sizeBytes: number; preview: Uint8Array }> {
+  const chunks: Uint8Array[] = [];
+  let previewLen = 0;
+  const pushPreview = (value: Uint8Array) => {
+    if (previewLen >= PREVIEW_BYTES) return;
+    const take = Math.min(value.byteLength, PREVIEW_BYTES - previewLen);
+    chunks.push(value.slice(0, take));
+    previewLen += take;
+  };
   if (!res.body) {
     const buf = await res.arrayBuffer();
     if (buf.byteLength > MAX_BYTES) {
       throw new InspectError(413, 'The response was too large.');
     }
-    return buf.byteLength;
+    const bytes = new Uint8Array(buf);
+    pushPreview(bytes);
+    return { sizeBytes: buf.byteLength, preview: concat(chunks) };
   }
   const reader = res.body.getReader();
   let total = 0;
@@ -152,12 +166,50 @@ async function readWithLimit(res: Response): Promise<number> {
     const { done, value } = await reader.read();
     if (done) break;
     total += value.byteLength;
+    pushPreview(value);
     if (total > MAX_BYTES) {
       await reader.cancel().catch(() => undefined);
       throw new InspectError(413, 'The response was too large.');
     }
   }
-  return total;
+  return { sizeBytes: total, preview: concat(chunks) };
+}
+
+function concat(parts: Uint8Array[]): Uint8Array {
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.byteLength, 0));
+  let off = 0;
+  for (const p of parts) {
+    out.set(p, off);
+    off += p.byteLength;
+  }
+  return out;
+}
+
+function buildPreview(contentType: string | null, preview: Uint8Array, sizeBytes: number) {
+  const ct = (contentType || '').toLowerCase();
+  const textLike = /text\/|json|javascript|xml|html|urlencoded/.test(ct) || sizeBytes === 0;
+  if (!textLike) {
+    return { previewText: null, previewTruncated: false, pageTitle: null };
+  }
+  let text = new TextDecoder('utf-8', { fatal: false }).decode(preview);
+  let title: string | null = null;
+  if (ct.includes('html')) {
+    const m = text.match(/<title[^>]*>([^<]{1,200})<\/title>/i);
+    if (m) title = m[1].trim();
+  }
+  if (ct.includes('json')) {
+    try {
+      const parsed: unknown = JSON.parse(new TextDecoder().decode(preview));
+      text = JSON.stringify(parsed, null, 2).slice(0, PREVIEW_BYTES);
+    } catch {
+      // truncated or non-JSON body, show raw text
+    }
+  }
+  return {
+    previewText: text || null,
+    previewTruncated: sizeBytes > preview.byteLength,
+    pageTitle: title,
+  };
 }
 
 export async function inspectUrl(input: string): Promise<InspectResult> {
@@ -211,12 +263,14 @@ export async function inspectUrl(input: string): Promise<InspectResult> {
   if (!res) throw new InspectError(502, 'The server could not reach this address.');
 
   const bodyStart = Date.now();
-  const sizeBytes = await readWithLimit(res).catch((e) => {
+  const { sizeBytes, preview } = await readWithLimit(res).catch((e) => {
     if (e instanceof InspectError) throw e;
     throw new InspectError(502, 'The server could not reach this address.');
   });
   const bodyMs = Date.now() - bodyStart;
   const totalMs = Date.now() - start;
+  const contentType = res.headers.get('content-type');
+  const { previewText, previewTruncated, pageTitle } = buildPreview(contentType, preview, sizeBytes);
   const headers: Record<string, string> = {};
   res.headers.forEach((v, k) => {
     headers[k] = v;
@@ -231,9 +285,12 @@ export async function inspectUrl(input: string): Promise<InspectResult> {
     responseTimeMs: totalMs,
     timing: { dnsMs, ttfbMs, bodyMs, totalMs },
     redirectCount,
-    contentType: res.headers.get('content-type'),
+    contentType,
     sizeBytes,
     server: res.headers.get('server'),
     headers,
+    previewText,
+    previewTruncated,
+    pageTitle,
   };
 }
