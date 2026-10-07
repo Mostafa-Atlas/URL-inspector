@@ -8,6 +8,11 @@ export interface Timing {
   totalMs: number;
 }
 
+export interface RedirectHop {
+  url: string;
+  status: number;
+}
+
 export interface InspectResult {
   url: string;
   finalUrl: string;
@@ -17,6 +22,7 @@ export interface InspectResult {
   responseTimeMs: number;
   timing: Timing;
   redirectCount: number;
+  redirects: RedirectHop[];
   contentType: string | null;
   sizeBytes: number;
   server: string | null;
@@ -220,6 +226,7 @@ export async function inspectUrl(input: string): Promise<InspectResult> {
   const start = Date.now();
   let current = startUrl.toString();
   let redirectCount = 0;
+  const redirects: RedirectHop[] = [];
   let res: Response | null = null;
   let ttfbMs = 0;
 
@@ -253,6 +260,7 @@ export async function inspectUrl(input: string): Promise<InspectResult> {
       if (redirectCount >= MAX_REDIRECTS) {
         throw new InspectError(508, 'Too many redirects.');
       }
+      redirects.push({ url: current, status });
       current = new URL(loc, current).toString();
       redirectCount++;
       continue;
@@ -285,6 +293,7 @@ export async function inspectUrl(input: string): Promise<InspectResult> {
     responseTimeMs: totalMs,
     timing: { dnsMs, ttfbMs, bodyMs, totalMs },
     redirectCount,
+    redirects,
     contentType,
     sizeBytes,
     server: res.headers.get('server'),

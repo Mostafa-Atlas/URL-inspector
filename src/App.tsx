@@ -9,6 +9,7 @@ interface Result {
   responseTimeMs: number;
   timing: { dnsMs: number; ttfbMs: number; bodyMs: number; totalMs: number };
   redirectCount: number;
+  redirects: { url: string; status: number }[];
   contentType: string | null;
   sizeBytes: number;
   server: string | null;
@@ -141,6 +142,22 @@ export default function App() {
             <br />
             Final: <code>{result.finalUrl}</code>
           </p>
+
+          <h2>Redirects</h2>
+          {result.redirects.length === 0 ? (
+            <p className="hint">Direct, no redirects.</p>
+          ) : (
+            <ol className="chain">
+              {result.redirects.map((h, i) => (
+                <li key={i}>
+                  <code>{h.status}</code> <code>{h.url}</code>
+                </li>
+              ))}
+              <li>
+                <code>{result.status}</code> <code>{result.finalUrl}</code>
+              </li>
+            </ol>
+          )}
 
           {result.previewText && (
             <>

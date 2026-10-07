@@ -119,6 +119,14 @@ h2 {
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
+.chain {
+  font-size: 14px;
+  word-break: break-all;
+  padding-left: 24px;
+}
+.chain li {
+  margin: 4px 0;
+}
 code {
   background: #f4f4f4;
   padding: 1px 4px;

@@ -101,6 +101,9 @@ describe('inspect', () => {
     assert.equal(r.redirectCount, 1);
     assert.ok(r.finalUrl.endsWith('/final'));
     assert.equal(r.status, 200);
+    assert.equal(r.redirects.length, 1);
+    assert.equal(r.redirects[0].status, 302);
+    assert.ok(r.redirects[0].url.endsWith('/'));
   });
   it('rejects unreachable url', async () => {
     await assert.rejects(() => inspectUrl('http://127.0.0.1:1/'), /could not reach/);
