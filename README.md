@@ -8,6 +8,8 @@ I built it as a personal demo I can actually maintain. No accounts, no database,
 
 Shows status code, timing breakdown (DNS lookup, wait for headers, body download, total), redirect chain, content type, size, server header when present, page title and a 2 KB body preview for text pages, security headers, caching and compression headers, cookies, TLS certificate expiry for HTTPS sites, final URL after redirects, and the full response headers. Errors are plain sentences like "Invalid URL" or "The request timed out."
 
+Compare mode inspects two URLs side by side and lists what differs. Request options allow other methods (POST, PUT, PATCH, DELETE, HEAD, OPTIONS), up to 10 custom headers, and a small body. Results can be downloaded as JSON, copied as cURL, or shared with a link.
+
 ## Run locally
 
 ```bash
@@ -45,7 +47,9 @@ Because anyone can pass in a URL, the endpoint has basic guards:
 - blocks localhost, private IPv4 ranges, link-local, and common internal hostnames
 - resolves DNS on every hop and rechecks each redirect, max 5 redirects
 - 10 second timeout, 2 MB response cap
-- only GET, no custom headers or methods
+- methods limited to GET, HEAD, POST, PUT, PATCH, DELETE, and OPTIONS
+- custom headers limited to 10, with connection-level headers blocked
+- request bodies capped at 100 KB and rejected on GET and HEAD
 - generic error messages, no stack traces
 
 Rate limiting is not included. On serverless that needs shared storage, which felt too heavy for this demo. If you put this online, add it at the edge or in front of the function.
