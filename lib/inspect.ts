@@ -1,6 +1,13 @@
 import dns from 'node:dns/promises';
 import net from 'node:net';
 
+export interface Timing {
+  dnsMs: number;
+  ttfbMs: number;
+  bodyMs: number;
+  totalMs: number;
+}
+
 export interface InspectResult {
   url: string;
   finalUrl: string;
@@ -8,6 +15,7 @@ export interface InspectResult {
   statusText: string;
   ok: boolean;
   responseTimeMs: number;
+  timing: Timing;
   redirectCount: number;
   contentType: string | null;
   sizeBytes: number;
@@ -154,23 +162,28 @@ async function readWithLimit(res: Response): Promise<number> {
 
 export async function inspectUrl(input: string): Promise<InspectResult> {
   const startUrl = parseTarget(input);
+  const dnsStart = Date.now();
   await assertSafeHost(startUrl.hostname);
+  const dnsMs = Date.now() - dnsStart;
   const start = Date.now();
   let current = startUrl.toString();
   let redirectCount = 0;
   let res: Response | null = null;
+  let ttfbMs = 0;
 
   for (let i = 0; i <= MAX_REDIRECTS; i++) {
     const u = parseTarget(current);
     await assertSafeHost(u.hostname);
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+    const fetchStart = Date.now();
     try {
       res = await fetch(current, {
         redirect: 'manual',
         signal: ctrl.signal,
         headers: { 'user-agent': 'http-inspector/0.1' },
       });
+      if (i === redirectCount) ttfbMs = Date.now() - fetchStart;
     } catch (e: unknown) {
       if (e instanceof InspectError) throw e;
       if ((e as Error)?.name === 'AbortError') {
@@ -197,10 +210,13 @@ export async function inspectUrl(input: string): Promise<InspectResult> {
 
   if (!res) throw new InspectError(502, 'The server could not reach this address.');
 
+  const bodyStart = Date.now();
   const sizeBytes = await readWithLimit(res).catch((e) => {
     if (e instanceof InspectError) throw e;
     throw new InspectError(502, 'The server could not reach this address.');
   });
+  const bodyMs = Date.now() - bodyStart;
+  const totalMs = Date.now() - start;
   const headers: Record<string, string> = {};
   res.headers.forEach((v, k) => {
     headers[k] = v;
@@ -212,7 +228,8 @@ export async function inspectUrl(input: string): Promise<InspectResult> {
     status: res.status,
     statusText: res.statusText,
     ok: res.ok,
-    responseTimeMs: Date.now() - start,
+    responseTimeMs: totalMs,
+    timing: { dnsMs, ttfbMs, bodyMs, totalMs },
     redirectCount,
     contentType: res.headers.get('content-type'),
     sizeBytes,

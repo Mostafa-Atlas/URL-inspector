@@ -72,6 +72,11 @@ describe('inspect', () => {
     assert.ok(r.sizeBytes > 0);
     assert.equal(r.server, 'test');
     assert.ok(r.headers['content-type']);
+    assert.ok(r.timing);
+    assert.ok(r.timing.dnsMs >= 0);
+    assert.ok(r.timing.ttfbMs >= 0);
+    assert.ok(r.timing.bodyMs >= 0);
+    assert.equal(r.timing.totalMs, r.responseTimeMs);
   });
   it('follows redirects', async () => {
     const r = await inspectUrl(`${addr(redir)}/`);
