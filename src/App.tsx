@@ -26,6 +26,13 @@ interface Result {
     contentEncoding: string | null;
   };
   cookies: string[];
+  cert: {
+    subject: string;
+    issuer: string;
+    validFrom: string;
+    validTo: string;
+    daysLeft: number;
+  } | null;
 }
 
 function fmtSize(n: number): string {
@@ -218,6 +225,32 @@ export default function App() {
                 </li>
               ))}
             </ul>
+          )}
+
+          {result.cert && (
+            <>
+              <h2>Certificate</h2>
+              <div className="grid">
+                <div>
+                  <span>Subject</span>
+                  <strong>{result.cert.subject}</strong>
+                </div>
+                <div>
+                  <span>Issuer</span>
+                  <strong>{result.cert.issuer}</strong>
+                </div>
+                <div>
+                  <span>Expires</span>
+                  <strong>{result.cert.validTo}</strong>
+                </div>
+                <div>
+                  <span>Days left</span>
+                  <strong className={result.cert.daysLeft < 30 ? 'missing' : 'good'}>
+                    {result.cert.daysLeft}
+                  </strong>
+                </div>
+              </div>
+            </>
           )}
 
           <h2>Response Headers</h2>

@@ -1,5 +1,6 @@
 import dns from 'node:dns/promises';
 import net from 'node:net';
+import tls from 'node:tls';
 
 export interface Timing {
   dnsMs: number;
@@ -17,6 +18,14 @@ export interface SecurityHeader {
   name: string;
   present: boolean;
   value: string | null;
+}
+
+export interface CertInfo {
+  subject: string;
+  issuer: string;
+  validFrom: string;
+  validTo: string;
+  daysLeft: number;
 }
 
 export interface Caching {
@@ -47,6 +56,7 @@ export interface InspectResult {
   security: SecurityHeader[];
   caching: Caching;
   cookies: string[];
+  cert: CertInfo | null;
 }
 
 export class InspectError extends Error {
@@ -136,6 +146,40 @@ function getCookies(res: Response, headers: Record<string, string>): string[] {
   const raw = headers['set-cookie'];
   if (!raw) return [];
   return [raw];
+}
+
+export function certDaysLeft(validTo: string, now = Date.now()): number {
+  return Math.ceil((new Date(validTo).getTime() - now) / 86_400_000);
+}
+
+async function getCert(hostname: string): Promise<CertInfo | null> {
+  if (net.isIP(hostname)) return null;
+  return new Promise((resolve) => {
+    const socket = tls.connect(
+      { host: hostname, port: 443, servername: hostname, rejectUnauthorized: false, timeout: 5000 },
+      () => {
+        const c = socket.getPeerCertificate() as unknown as Record<string, unknown>;
+        socket.end();
+        if (!c || !c.valid_to) return resolve(null);
+        const issuer = c.issuer as Record<string, string> | undefined;
+        const subject = c.subject as Record<string, string> | undefined;
+        const validTo = String(c.valid_to);
+        resolve({
+          subject: subject?.CN ?? hostname,
+          issuer: issuer?.O ?? issuer?.CN ?? 'unknown',
+          validFrom: String(c.valid_from ?? ''),
+          validTo,
+          daysLeft: certDaysLeft(validTo),
+        });
+      }
+    );
+    socket.on('error', () => resolve(null));
+    socket.on('timeout', () => {
+      socket.destroy();
+      resolve(null);
+    });
+    setTimeout(() => resolve(null), 6000).unref?.();
+  });
 }
 
 function allowPrivate(): boolean {
@@ -353,5 +397,8 @@ export async function inspectUrl(input: string): Promise<InspectResult> {
       contentEncoding: headers['content-encoding'] ?? null,
     },
     cookies: getCookies(res, headers),
+    cert: current.startsWith('https:')
+      ? await getCert(new URL(current).hostname).catch(() => null)
+      : null,
   };
 }
