@@ -39,6 +39,7 @@ export interface Caching {
 export interface InspectResult {
   url: string;
   finalUrl: string;
+  method: string;
   status: number;
   statusText: string;
   ok: boolean;
@@ -59,6 +60,12 @@ export interface InspectResult {
   cert: CertInfo | null;
 }
 
+export interface InspectOptions {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+}
+
 export class InspectError extends Error {
   status: number;
   publicMessage: string;
@@ -73,6 +80,62 @@ export const MAX_REDIRECTS = 5;
 export const TIMEOUT_MS = 10_000;
 export const MAX_BYTES = 2_000_000;
 export const PREVIEW_BYTES = 2048;
+export const MAX_BODY_BYTES = 100_000;
+export const MAX_HEADERS = 10;
+
+const ALLOWED_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];
+const BLOCKED_HEADERS = [
+  'host',
+  'content-length',
+  'connection',
+  'keep-alive',
+  'transfer-encoding',
+  'upgrade',
+  'te',
+  'trailer',
+  'proxy-authenticate',
+  'proxy-authorization',
+];
+
+export function normalizeOptions(options?: InspectOptions): {
+  method: string;
+  headers: Record<string, string>;
+  body?: string;
+} {
+  const method = (options?.method || 'GET').toUpperCase();
+  if (!ALLOWED_METHODS.includes(method)) {
+    throw new InspectError(400, 'Method not allowed.');
+  }
+  const raw = options?.headers || {};
+  const names = Object.keys(raw);
+  if (names.length > MAX_HEADERS) {
+    throw new InspectError(400, 'Too many headers.');
+  }
+  const headers: Record<string, string> = {};
+  for (const n of names) {
+    const name = n.toLowerCase().trim();
+    if (!/^[a-z0-9-]+$/.test(name) || name.length > 64) {
+      throw new InspectError(400, 'Invalid header name.');
+    }
+    if (BLOCKED_HEADERS.includes(name)) {
+      throw new InspectError(400, `Header not allowed: ${name}`);
+    }
+    const value = String(raw[n]);
+    if (value.length > 2048) throw new InspectError(400, 'Header value too long.');
+    headers[name] = value;
+  }
+  const body = options?.body;
+  if (body !== undefined && body !== '') {
+    if (method === 'GET' || method === 'HEAD') {
+      throw new InspectError(400, 'Body needs POST, PUT, PATCH, or DELETE.');
+    }
+    if (body.length > MAX_BODY_BYTES) {
+      throw new InspectError(413, 'Request body too large.');
+    }
+    return { method, headers, body };
+  }
+  return { method, headers };
+}
 
 function ipv4ToInt(ip: string): number {
   const p = ip.split('.').map(Number);
@@ -305,8 +368,9 @@ function buildPreview(contentType: string | null, preview: Uint8Array, sizeBytes
   };
 }
 
-export async function inspectUrl(input: string): Promise<InspectResult> {
+export async function inspectUrl(input: string, options?: InspectOptions): Promise<InspectResult> {
   const startUrl = parseTarget(input);
+  const { method, headers: userHeaders, body } = normalizeOptions(options);
   const dnsStart = Date.now();
   await assertSafeHost(startUrl.hostname);
   const dnsMs = Date.now() - dnsStart;
@@ -325,9 +389,11 @@ export async function inspectUrl(input: string): Promise<InspectResult> {
     const fetchStart = Date.now();
     try {
       res = await fetch(current, {
+        method,
         redirect: 'manual',
         signal: ctrl.signal,
-        headers: { 'user-agent': 'http-inspector/0.1' },
+        headers: { 'user-agent': 'http-inspector/0.1', ...userHeaders },
+        body,
       });
       if (i === redirectCount) ttfbMs = Date.now() - fetchStart;
     } catch (e: unknown) {
@@ -374,6 +440,7 @@ export async function inspectUrl(input: string): Promise<InspectResult> {
   return {
     url: startUrl.toString(),
     finalUrl: current,
+    method,
     status: res.status,
     statusText: res.statusText,
     ok: res.ok,

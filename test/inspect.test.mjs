@@ -11,13 +11,21 @@ function listen(handler) {
 }
 const addr = (s) => `http://127.0.0.1:${s.address().port}`;
 
-let ok, redir, big, slow, json, html;
+let ok, redir, big, slow, json, html, echo;
 before(async () => {
   ok = await listen((req, res) => {
     res.setHeader('content-type', 'text/plain');
     res.setHeader('server', 'test');
     res.setHeader('set-cookie', 'sid=abc; Path=/');
     res.end('hello');
+  });
+  echo = await listen((req, res) => {
+    let body = '';
+    req.on('data', (c) => (body += c));
+    req.on('end', () => {
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({ method: req.method, xTest: req.headers['x-test'] || null, bytes: body.length }));
+    });
   });
   json = await listen((req, res) => {
     res.setHeader('content-type', 'application/json');
@@ -43,7 +51,7 @@ before(async () => {
   slow = await listen(() => {});
 });
 after(() => {
-  for (const s of [ok, redir, big, slow, json, html]) s.close();
+  for (const s of [ok, redir, big, slow, json, html, echo]) s.close();
 });
 
 describe('validation', () => {
@@ -123,6 +131,28 @@ describe('inspect', () => {
   });
   it('rejects unreachable url', async () => {
     await assert.rejects(() => inspectUrl('http://127.0.0.1:1/'), /could not reach/);
+  });
+  it('sends custom method, headers, and body', async () => {
+    const r = await inspectUrl(`${addr(echo)}/`, {
+      method: 'POST',
+      headers: { 'x-test': '1', 'content-type': 'application/json' },
+      body: '{"a":1}',
+    });
+    assert.equal(r.method, 'POST');
+    assert.ok(r.previewText.includes('"method": "POST"'));
+    assert.ok(r.previewText.includes('"xTest": "1"'));
+  });
+  it('rejects bad custom requests', async () => {
+    await assert.rejects(() => inspectUrl(`${addr(echo)}/`, { method: 'TRACE' }), /Method not allowed/);
+    await assert.rejects(
+      () => inspectUrl(`${addr(echo)}/`, { headers: { connection: 'keep-alive' } }),
+      /Header not allowed/
+    );
+    await assert.rejects(() => inspectUrl(`${addr(echo)}/`, { body: 'x' }), /Body needs/);
+    await assert.rejects(
+      () => inspectUrl(`${addr(echo)}/`, { method: 'POST', body: 'x'.repeat(100_001) }),
+      /too large/
+    );
   });
   it('rejects too-large response', async () => {
     await assert.rejects(() => inspectUrl(`${addr(big)}/`), /too large/);
