@@ -3,6 +3,7 @@ import { useState } from 'react';
 interface Result {
   url: string;
   finalUrl: string;
+  method: string;
   status: number;
   statusText: string;
   ok: boolean;
@@ -54,8 +55,38 @@ function Bar({ label, ms, total }: { label: string; ms: number; total: number })
   );
 }
 
+function parseHeaderLines(text: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const line of text.split('\n')) {
+    const i = line.indexOf(':');
+    if (i < 1) continue;
+    const name = line.slice(0, i).trim();
+    const value = line.slice(i + 1).trim();
+    if (name && value) out[name] = value;
+  }
+  return out;
+}
+
+async function fetchInspect(
+  target: string,
+  opts: { method: string; headers: Record<string, string>; body: string }
+): Promise<{ ok: boolean; data: Result & { error?: string } }> {
+  const custom = opts.method !== 'GET' || Object.keys(opts.headers).length > 0 || opts.body !== '';
+  const r = custom
+    ? await fetch('/api/inspect', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ url: target, method: opts.method, headers: opts.headers, body: opts.body || undefined }),
+      })
+    : await fetch(`/api/inspect?url=${encodeURIComponent(target)}`);
+  return { ok: r.ok, data: await r.json() };
+}
+
 export default function App() {
   const [url, setUrl] = useState('https://example.com');
+  const [method, setMethod] = useState('GET');
+  const [headerText, setHeaderText] = useState('');
+  const [bodyText, setBodyText] = useState('');
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -68,9 +99,12 @@ export default function App() {
     setError(null);
     setResult(null);
     try {
-      const r = await fetch(`/api/inspect?url=${encodeURIComponent(url)}`);
-      const data = await r.json();
-      if (!r.ok) {
+      const { ok, data } = await fetchInspect(url, {
+        method,
+        headers: parseHeaderLines(headerText),
+        body: bodyText,
+      });
+      if (!ok) {
         setError(data.error || 'Something went wrong.');
         return;
       }
@@ -100,6 +134,39 @@ export default function App() {
           {loading ? 'Inspecting…' : 'Inspect'}
         </button>
       </form>
+      <details className="opts">
+        <summary>Request options</summary>
+        <label>
+          Method
+          <select value={method} onChange={(e) => setMethod(e.target.value)}>
+            {['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'].map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Headers, one per line as Name: value
+          <textarea
+            value={headerText}
+            onChange={(e) => setHeaderText(e.target.value)}
+            placeholder={'X-Test: 1'}
+            rows={3}
+            aria-label="Custom request headers"
+          />
+        </label>
+        <label>
+          Body (POST, PUT, PATCH, DELETE only)
+          <textarea
+            value={bodyText}
+            onChange={(e) => setBodyText(e.target.value)}
+            placeholder='{"a": 1}'
+            rows={4}
+            aria-label="Request body"
+          />
+        </label>
+      </details>
 
       {error && (
         <p className="error" role="alert">
@@ -117,6 +184,10 @@ export default function App() {
             {result.status} {result.statusText}
           </p>
           <div className="grid">
+            <div>
+              <span>Method</span>
+              <strong>{result.method}</strong>
+            </div>
             <div>
               <span>Response</span>
               <strong>{result.responseTimeMs} ms</strong>
