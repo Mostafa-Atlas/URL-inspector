@@ -27,13 +27,33 @@ npm test
 
 `ALLOW_PRIVATE=1` is only read by the local test run so the test servers on 127.0.0.1 can be fetched. Production blocks those addresses.
 
+## CLI
+
+The same inspector runs in the terminal. It needs Node 22 or newer.
+
+```bash
+./bin/http-inspector https://example.com
+./bin/http-inspector https://example.com --json
+./bin/http-inspector https://api.example.com/items --method POST --header "Content-Type: application/json" --body '{"a": 1}'
+./bin/http-inspector http://localhost:3000/ --allow-private
+```
+
+`--dashboard` serves the web UI on your machine instead of printing to the terminal. Run `npm run build` once first, then:
+
+```bash
+./bin/http-inspector --dashboard
+./bin/http-inspector --dashboard --port 8080
+```
+
+The dashboard keeps the same blocks as production. Only the direct CLI call accepts `--allow-private`, which is meant for testing your own services.
+
 ## Architecture
 
 ```text
 Browser -> /api/inspect -> target site
 ```
 
-The frontend is React plus Vite with plain CSS. The browser never fetches the target directly, which avoids CORS issues. `api/inspect.ts` runs as a Vercel function in production and through a small Vite middleware in dev. Both call `inspectUrl()` in `lib/inspect.ts`.
+The frontend is React plus Vite with plain CSS. The browser never fetches the target directly, which avoids CORS issues. `api/inspect.ts` runs as a Vercel function in production and through a small Vite middleware in dev. `bin/server.mjs` serves the same check locally for `--dashboard`. All three call `inspectUrl()` in `lib/inspect.ts`.
 
 ## Deployment
 
