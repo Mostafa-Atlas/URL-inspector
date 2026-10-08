@@ -1,7 +1,43 @@
 :root {
   font-family: system-ui, sans-serif;
-  color: #111;
-  background: #fff;
+  --bg: #fff;
+  --fg: #111;
+  --muted: #444;
+  --faint: #666;
+  --hint: #777;
+  --border: #ddd;
+  --panel: #f6f6f6;
+  --code: #f4f4f4;
+  --track: #eee;
+  --fill: #333;
+  --ok: #0a6b2a;
+  --ok-bg: #eef7f1;
+  --ok-border: #bfe3cd;
+  --bad: #a00;
+  --bad-bg: #fdecec;
+  --bad-border: #f5c2c2;
+  color: var(--fg);
+  background: var(--bg);
+  color-scheme: light;
+}
+[data-theme='dark'] {
+  --bg: #161616;
+  --fg: #e8e8e8;
+  --muted: #b5b5b5;
+  --faint: #999;
+  --hint: #999;
+  --border: #333;
+  --panel: #1f1f1f;
+  --code: #242424;
+  --track: #2c2c2c;
+  --fill: #bbb;
+  --ok: #7ddba0;
+  --ok-bg: #12291a;
+  --ok-border: #1f4d2e;
+  --bad: #f19a9a;
+  --bad-bg: #2b1414;
+  --bad-border: #5a2323;
+  color-scheme: dark;
 }
 .wrap {
   max-width: 680px;
@@ -12,6 +48,17 @@
 h1 {
   margin-bottom: 4px;
 }
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.top button {
+  padding: 4px 12px;
+  font-size: 14px;
+  flex-shrink: 0;
+}
 .row {
   display: flex;
   gap: 8px;
@@ -21,21 +68,28 @@ input {
   padding: 8px 10px;
   font-size: 16px;
 }
+input,
+select,
+textarea {
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
 button {
   padding: 8px 16px;
   font-size: 16px;
   cursor: pointer;
 }
 .sub {
-  color: #444;
+  color: var(--muted);
 }
 .hint {
-  color: #777;
+  color: var(--hint);
   font-size: 14px;
 }
 .card {
   margin-top: 20px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
 }
@@ -47,28 +101,28 @@ button {
 .grid span {
   display: block;
   font-size: 12px;
-  color: #666;
+  color: var(--faint);
 }
 .urls {
   font-size: 14px;
   word-break: break-all;
 }
 .headers {
-  background: #f6f6f6;
+  background: var(--panel);
   padding: 12px;
   overflow: auto;
   font-size: 13px;
 }
 .error {
-  color: #a00;
-  background: #fdecec;
-  border: 1px solid #f5c2c2;
+  color: var(--bad);
+  background: var(--bad-bg);
+  border: 1px solid var(--bad-border);
   padding: 10px 12px;
   border-radius: 6px;
 }
 .opts {
   margin-top: 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 12px;
 }
@@ -96,18 +150,18 @@ button {
   padding: 4px 12px;
   border-radius: 16px;
   font-weight: 600;
-  border: 1px solid #ddd;
-  background: #f6f6f6;
+  border: 1px solid var(--border);
+  background: var(--panel);
 }
 .badge.ok {
-  color: #0a6b2a;
-  border-color: #bfe3cd;
-  background: #eef7f1;
+  color: var(--ok);
+  border-color: var(--ok-border);
+  background: var(--ok-bg);
 }
 .badge.bad {
-  color: #a00;
-  border-color: #f5c2c2;
-  background: #fdecec;
+  color: var(--bad);
+  border-color: var(--bad-border);
+  background: var(--bad-bg);
 }
 h2 {
   font-size: 16px;
@@ -123,17 +177,17 @@ h2 {
   width: 128px;
   flex-shrink: 0;
   font-size: 13px;
-  color: #444;
+  color: var(--muted);
 }
 .bar-track {
   flex: 1;
   height: 8px;
-  background: #eee;
+  background: var(--track);
   border-radius: 4px;
 }
 .bar-fill {
   height: 8px;
-  background: #333;
+  background: var(--fill);
   border-radius: 4px;
 }
 .bar-ms {
@@ -151,15 +205,16 @@ h2 {
 .mode button {
   padding: 4px 16px;
   font-size: 14px;
-  background: #f6f6f6;
-  border: 1px solid #ddd;
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: 16px;
   cursor: pointer;
+  color: var(--fg);
 }
 .mode button.active {
-  background: #111;
-  color: #fff;
-  border-color: #111;
+  background: var(--fg);
+  color: var(--bg);
+  border-color: var(--fg);
 }
 .card-title {
   margin-top: 0;
@@ -213,15 +268,15 @@ h2 {
   font-size: 13px;
 }
 .good {
-  color: #0a6b2a;
+  color: var(--ok);
   font-weight: 600;
 }
 .missing {
-  color: #a00;
+  color: var(--bad);
   font-weight: 600;
 }
 code {
-  background: #f4f4f4;
+  background: var(--code);
   padding: 1px 4px;
   border-radius: 4px;
 }

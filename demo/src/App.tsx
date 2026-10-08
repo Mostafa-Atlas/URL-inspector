@@ -56,7 +56,25 @@ export default function App() {
   const [touched, setTouched] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[]>(() => loadHistory());
   const [lastDiff, setLastDiff] = useState<{ at: number; rows: Diff[] } | null>(null);
+  const [dark, setDark] = useState(() => {
+    try {
+      const saved = localStorage.getItem('http-inspector-theme');
+      if (saved) return saved === 'dark';
+    } catch {
+      // storage unavailable, fall through to system preference
+    }
+    return typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches;
+  });
   const ranShared = useRef(false);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    try {
+      localStorage.setItem('http-inspector-theme', dark ? 'dark' : 'light');
+    } catch {
+      // ignore
+    }
+  }, [dark]);
 
   useEffect(() => {
     if (ranShared.current) return;
@@ -176,7 +194,12 @@ export default function App() {
 
   return (
     <main className="wrap">
-      <h1>HTTP Inspector</h1>
+      <div className="top">
+        <h1>HTTP Inspector</h1>
+        <button type="button" onClick={() => setDark(!dark)} aria-label="Toggle dark mode">
+          {dark ? 'Light' : 'Dark'}
+        </button>
+      </div>
       <p className="sub">Enter a URL to inspect it.</p>
       <div className="mode" role="tablist" aria-label="Mode">
         <button
