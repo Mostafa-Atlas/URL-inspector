@@ -4,9 +4,9 @@ A small tool for checking what a URL returns. It lives in the terminal by defaul
 
 ## Features
 
-Shows status code, timing breakdown (DNS lookup, wait for headers, body download, total), redirect chain, content type, size, server header when present, page title and a 2 KB body preview for text pages, security headers, caching and compression headers, cookies, TLS certificate expiry for HTTPS sites, final URL after redirects, and the full response headers. Errors are plain sentences like "Invalid URL" or "The request timed out."
+Shows status code, timing breakdown (DNS lookup, wait for headers, body download, total), redirect chain, content type, size, server header and resolved IP addresses when present, page title and a 2 KB body preview for text pages, security headers, caching and compression headers, cookies, TLS certificate expiry for HTTPS sites, final URL after redirects, and the full response headers. Errors are plain sentences like "Invalid URL" or "The request timed out."
 
-Compare mode inspects two URLs side by side and lists what differs. Request options allow other methods (POST, PUT, PATCH, DELETE, HEAD, OPTIONS), up to 10 custom headers, and a small body. Results can be downloaded as JSON, copied as cURL, or shared with a link. The dashboard keeps the last 20 inspections in your own browser storage, with one click re-inspection and a note when something changed since your last visit.
+Compare mode inspects two URLs side by side and lists what differs. Request options allow other methods (POST, PUT, PATCH, DELETE, HEAD, OPTIONS), up to 10 custom headers, and a small body. Results can be downloaded as JSON, copied as cURL, or shared with a link. The dashboard keeps the last 20 inspections in your own browser storage, with one click re-inspection and a note when something changed since your last visit. It has a dark mode toggle that follows your system setting until you pick one.
 
 ## Layout
 
