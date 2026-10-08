@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { ResultCard, diffResults, type Result } from './ResultCard';
 import { ExportButtons } from './export';
 
@@ -251,6 +252,7 @@ export default function App() {
         </div>
       )}
       {mode === 'compare' && result && !result2 && !loading && <ResultCard result={result} title="A" />}
+      <Analytics />
     </main>
   );
 }
