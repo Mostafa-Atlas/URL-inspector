@@ -107,7 +107,7 @@ export default function App() {
   const diffs = result && result2 ? diffResults(result, result2) : [];
 
   return (
-    <main className={`wrap${mode === 'compare' ? ' wide' : ''}`}>
+    <main className="wrap">
       <h1>HTTP Inspector</h1>
       <p className="sub">Enter a URL to inspect it.</p>
       <div className="mode" role="tablist" aria-label="Mode">

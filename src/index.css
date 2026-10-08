@@ -9,9 +9,6 @@
   padding: 0 16px;
   line-height: 1.5;
 }
-.wrap.wide {
-  max-width: 1120px;
-}
 h1 {
   margin-bottom: 4px;
 }
@@ -168,10 +165,9 @@ h2 {
   margin-top: 0;
 }
 .compare {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
-  align-items: start;
 }
 .exports {
   display: flex;
@@ -192,11 +188,6 @@ h2 {
 .col input {
   padding: 8px 10px;
   font-size: 16px;
-}
-@media (max-width: 720px) {
-  .compare {
-    grid-template-columns: 1fr;
-  }
 }
 .chain {
   font-size: 14px;
