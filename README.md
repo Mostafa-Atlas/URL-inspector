@@ -32,17 +32,17 @@ npm test
 The same inspector runs in the terminal. It needs Node 22 or newer.
 
 ```bash
-./bin/http-inspector https://example.com
-./bin/http-inspector https://example.com --json
-./bin/http-inspector https://api.example.com/items --method POST --header "Content-Type: application/json" --body '{"a": 1}'
-./bin/http-inspector http://localhost:3000/ --allow-private
+./bin/http-inspector.mjs https://example.com
+./bin/http-inspector.mjs https://example.com --json
+./bin/http-inspector.mjs https://api.example.com/items --method POST --header "Content-Type: application/json" --body '{"a": 1}'
+./bin/http-inspector.mjs http://localhost:3000/ --allow-private
 ```
 
 `--dashboard` serves the web UI on your machine instead of printing to the terminal. Run `npm run build` once first, then:
 
 ```bash
-./bin/http-inspector --dashboard
-./bin/http-inspector --dashboard --port 8080
+./bin/http-inspector.mjs --dashboard
+./bin/http-inspector.mjs --dashboard --port 8080
 ```
 
 The dashboard keeps the same blocks as production. Only the direct CLI call accepts `--allow-private`, which is meant for testing your own services.
