@@ -2,7 +2,7 @@ import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { inspectUrl, InspectError } from '../lib/inspect.ts';
+import { inspectUrl, InspectError } from '../demo/lib/inspect.ts';
 
 const TYPES = {
   '.html': 'text/html',
@@ -14,7 +14,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 
-const distDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist');
+const distDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'demo', 'dist');
 
 async function readJson(req, limit = 300_000) {
   const chunks = [];
@@ -76,7 +76,7 @@ async function handleStatic(req, res) {
       res.end(index);
     } catch {
       res.writeHead(404);
-      res.end('Not found. Run npm run build first.');
+      res.end('Not found. Run npm --prefix demo run build first.');
     }
   }
 }

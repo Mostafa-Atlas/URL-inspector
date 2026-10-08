@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util';
 import { pathToFileURL } from 'node:url';
-import { inspectUrl, InspectError } from '../lib/inspect.ts';
+import { inspectUrl, InspectError } from '../demo/lib/inspect.ts';
 
 const HELP = `Usage: http-inspector <url> [options]
 
