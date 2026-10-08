@@ -31,6 +31,7 @@ export default async function handler(req: any, res: any) {
     const result = await inspectUrl(url, options);
     return res.status(200).json(result);
   } catch (e: unknown) {
+    console.error('inspect failed:', e instanceof Error ? e.message : String(e));
     if (e instanceof InspectError) {
       return res.status(e.status).json({ error: e.publicMessage });
     }
