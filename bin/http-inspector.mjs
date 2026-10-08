@@ -11,6 +11,8 @@ Options:
   --body <text>     request body (needs POST, PUT, PATCH, or DELETE)
   --json            print raw JSON
   --allow-private   allow localhost and private addresses
+  --dashboard       serve the web UI locally instead of inspecting
+  --port <n>        dashboard port (default 3000)
   -h, --help        show this text`;
 
 function parseHeaders(lines) {
@@ -52,12 +54,20 @@ export async function main(argv = process.argv.slice(2)) {
       body: { type: 'string', default: '' },
       json: { type: 'boolean', default: false },
       'allow-private': { type: 'boolean', default: false },
+      dashboard: { type: 'boolean', default: false },
+      port: { type: 'string', default: '3000' },
       help: { type: 'boolean', short: 'h', default: false },
     },
   });
 
   if (values.help) {
     console.log(HELP);
+    return 0;
+  }
+  if (values.dashboard) {
+    const { startServer } = await import('./server.mjs');
+    await startServer(Number(values.port) || 3000);
+    await new Promise(() => {}); // keep serving until Ctrl-C
     return 0;
   }
   const target = positionals[0];
