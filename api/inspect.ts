@@ -1,4 +1,4 @@
-import { InspectError, inspectUrl } from '../lib/inspect';
+import { InspectError, inspectUrl } from '../lib/inspect.js';
 
 // Vercel Node function (no extra deps). Keep handler untyped to avoid @vercel/node.
 export default async function handler(req: any, res: any) {
