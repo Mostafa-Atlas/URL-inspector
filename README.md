@@ -1,8 +1,6 @@
 # HTTP Inspector
 
-A small tool for checking what a URL returns. Paste a URL, hit Inspect, and it shows status, timing, size, redirects, and headers.
-
-I built it as a personal demo I can actually maintain. No accounts, no database, just a form and one API route.
+A small tool for checking what a URL returns. It lives in the terminal by default: run it with a URL and it prints status, timing, size, redirects, and headers. A web dashboard comes along for when you want clicks instead of flags.
 
 ## Features
 
@@ -10,11 +8,21 @@ Shows status code, timing breakdown (DNS lookup, wait for headers, body download
 
 Compare mode inspects two URLs side by side and lists what differs. Request options allow other methods (POST, PUT, PATCH, DELETE, HEAD, OPTIONS), up to 10 custom headers, and a small body. Results can be downloaded as JSON, copied as cURL, or shared with a link.
 
+## Layout
+
+The CLI is the project. The web dashboard lives in `demo/` on its own so it can deploy alone.
+
+```text
+bin/    the CLI and the local dashboard server
+demo/   the web dashboard (Vercel points here)
+demo/lib/  the shared inspection core both of them use
+```
+
 ## Run locally
 
 ```bash
-npm install
-npm run dev
+npm --prefix demo install
+npm --prefix demo run dev
 ```
 
 Open http://localhost:5173 and try https://example.com.
@@ -38,7 +46,7 @@ The same inspector runs in the terminal. It needs Node 22 or newer.
 ./bin/http-inspector.mjs http://localhost:3000/ --allow-private
 ```
 
-`--dashboard` serves the web UI on your machine instead of printing to the terminal. Run `npm run build` once first, then:
+`--dashboard` serves the web UI on your machine instead of printing to the terminal. Build the demo once first (`npm --prefix demo run build`), then:
 
 ```bash
 ./bin/http-inspector.mjs --dashboard
@@ -53,11 +61,11 @@ The dashboard keeps the same blocks as production. Only the direct CLI call acce
 Browser -> /api/inspect -> target site
 ```
 
-The frontend is React plus Vite with plain CSS. The browser never fetches the target directly, which avoids CORS issues. `api/inspect.ts` runs as a Vercel function in production and through a small Vite middleware in dev. `bin/server.mjs` serves the same check locally for `--dashboard`. All three call `inspectUrl()` in `lib/inspect.ts`.
+The frontend is React plus Vite with plain CSS. The browser never fetches the target directly, which avoids CORS issues. `demo/api/inspect.ts` runs as a Vercel function in production and through a small Vite middleware in dev. `bin/server.mjs` serves the same check locally for `--dashboard`. All three call `inspectUrl()` in `demo/lib/inspect.ts`.
 
 ## Deployment
 
-Push to Vercel and it works with no extra config. The build is `tsc --noEmit && vite build`. There are no environment variables and nothing secret in the repo.
+The demo deploys on its own. In Vercel set the project's Root Directory to `demo/` and leave the rest default: the build is `tsc --noEmit && vite build` and `demo/api` becomes the functions. There are no environment variables and nothing secret in the repo.
 
 ## Security
 
@@ -78,4 +86,4 @@ This is reasonable protection for a demo, not a guarantee. DNS rebinding between
 
 ## Limitations
 
-Response bodies are counted but not shown. Redirect chains stop at 5. Timeouts and size caps are fixed. IPv6 blocking covers common private ranges.
+Response bodies show a 2 KB preview. Redirect chains stop at 5. Timeouts and size caps are fixed. IPv6 blocking covers common private ranges.
