@@ -32,6 +32,7 @@ export interface Result {
     validTo: string;
     daysLeft: number;
   } | null;
+  ips: string[];
 }
 
 export function fmtSize(n: number): string {
@@ -110,10 +111,14 @@ export function ResultCard({ result, title }: { result: Result; title?: string }
           <span>Redirects</span>
           <strong>{result.redirectCount}</strong>
         </div>
-        <div>
-          <span>Server</span>
-          <strong>{result.server || '—'}</strong>
-        </div>
+            <div>
+              <span>Server</span>
+              <strong>{result.server || '—'}</strong>
+            </div>
+            <div>
+              <span>Resolved IP</span>
+              <strong>{result.ips.join(', ') || '—'}</strong>
+            </div>
         <div>
           <span>Page title</span>
           <strong>{result.pageTitle || '—'}</strong>

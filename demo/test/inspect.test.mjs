@@ -1,7 +1,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { inspectUrl, parseTarget, isPrivateIP, securityHeaders, certDaysLeft, MAX_BYTES } from '../lib/inspect.ts';
+import { inspectUrl, parseTarget, isPrivateIP, securityHeaders, certDaysLeft, resolveAddresses, MAX_BYTES } from '../lib/inspect.ts';
 
 process.env.ALLOW_PRIVATE = '1';
 
@@ -78,6 +78,10 @@ describe('validation', () => {
     assert.equal(s.find((h) => h.name === 'x-frame-options').present, true);
     assert.equal(s.find((h) => h.name === 'content-security-policy').present, false);
   });
+  it('resolves localhost to 127.0.0.1', async () => {
+    const ips = await resolveAddresses('localhost');
+    assert.ok(ips.includes('127.0.0.1'));
+  });
   it('computes cert days left', () => {
     const now = Date.now();
     const ten = new Date(now + 10 * 86_400_000).toISOString();
@@ -111,6 +115,7 @@ describe('inspect', () => {
     assert.ok(r.caching);
     assert.ok(r.cookies.some((c) => c.startsWith('sid=abc')));
     assert.equal(r.cert, null);
+    assert.ok(r.ips.includes('127.0.0.1'));
   });
   it('pretty-prints json preview', async () => {
     const r = await inspectUrl(`${addr(json)}/`);

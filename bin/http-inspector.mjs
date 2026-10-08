@@ -34,6 +34,7 @@ function printPretty(r) {
     `Size ${r.sizeBytes} B · Type ${r.contentType || '—'} · Server ${r.server || '—'} · Redirects ${r.redirectCount}`
   );
   if (r.pageTitle) console.log(`Title ${r.pageTitle}`);
+  if (r.ips.length > 0) console.log(`IP ${r.ips.join(', ')}`);
   const missing = r.security.filter((h) => !h.present).map((h) => h.name);
   if (missing.length > 0) console.log(`Missing security headers: ${missing.join(', ')}`);
   if (r.cookies.length > 0) console.log(`Cookies: ${r.cookies.map((c) => c.split(';')[0].trim()).join(', ')}`);

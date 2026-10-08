@@ -58,6 +58,7 @@ export interface InspectResult {
   caching: Caching;
   cookies: string[];
   cert: CertInfo | null;
+  ips: string[];
 }
 
 export interface InspectOptions {
@@ -298,6 +299,16 @@ export async function assertSafeHost(hostname: string): Promise<void> {
   }
 }
 
+export async function resolveAddresses(hostname: string): Promise<string[]> {
+  if (net.isIP(hostname)) return [hostname];
+  try {
+    const records = await dns.lookup(hostname, { all: true });
+    return [...new Set(records.map((r) => r.address))];
+  } catch {
+    return [];
+  }
+}
+
 async function readWithLimit(res: Response): Promise<{ sizeBytes: number; preview: Uint8Array }> {
   const chunks: Uint8Array[] = [];
   let previewLen = 0;
@@ -467,5 +478,6 @@ export async function inspectUrl(input: string, options?: InspectOptions): Promi
     cert: current.startsWith('https:')
       ? await getCert(new URL(current).hostname).catch(() => null)
       : null,
+    ips: await resolveAddresses(new URL(current).hostname).catch(() => []),
   };
 }
