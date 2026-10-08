@@ -55,6 +55,17 @@ The same inspector runs in the terminal. It needs Node 22 or newer.
 
 The dashboard keeps the same blocks as production. Only the direct CLI call accepts `--allow-private`, which is meant for testing your own services.
 
+## Windows
+
+The examples above use `./bin/...`, which is Mac and Linux syntax. On Windows open PowerShell or Command Prompt in the project folder and put `node` in front:
+
+```bash
+node bin/http-inspector.mjs https://example.com
+node bin/http-inspector.mjs --dashboard
+```
+
+Everything else is the same. You still need Node 22 or newer; check with `node --version`.
+
 ## Architecture
 
 ```text
@@ -87,3 +98,27 @@ This is reasonable protection for a demo, not a guarantee. DNS rebinding between
 ## Limitations
 
 Response bodies show a 2 KB preview. Redirect chains stop at 5. Timeouts and size caps are fixed. IPv6 blocking covers common private ranges.
+
+
+## Images
+
+### 1. Empty state
+![Empty state](screenshots/01-empty.png)
+
+### 2. Inspect result
+![Inspect result](screenshots/02-result.png)
+
+### 3. Compare mode
+![Compare mode](screenshots/03-compare.png)
+
+### 4. Custom POST request
+![Custom POST request](screenshots/04-custom-post.png)
+
+### 5. Error handling
+![Error handling](screenshots/05-error.png)
+
+### 6. Dark mode
+![Dark mode](screenshots/06-dark.png)
+
+### 7. Mobile view
+![Mobile view](screenshots/07-mobile.png)
