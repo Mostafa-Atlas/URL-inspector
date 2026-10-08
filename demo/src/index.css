@@ -207,6 +207,11 @@ h2 {
   margin: 4px 0;
   word-break: break-all;
 }
+.checks li button {
+  margin-left: 8px;
+  padding: 2px 10px;
+  font-size: 13px;
+}
 .good {
   color: #0a6b2a;
   font-weight: 600;

@@ -59,7 +59,17 @@ export interface Diff {
   b: string;
 }
 
-export function diffResults(a: Result, b: Result): Diff[] {
+export interface Diffable {
+  status: number;
+  statusText: string;
+  contentType: string | null;
+  server: string | null;
+  sizeBytes: number;
+  redirectCount: number;
+  pageTitle: string | null;
+}
+
+export function diffResults(a: Diffable, b: Diffable): Diff[] {
   const rows: [string, string, string][] = [
     ['Status', `${a.status} ${a.statusText}`, `${b.status} ${b.statusText}`],
     ['Content-Type', a.contentType || '—', b.contentType || '—'],

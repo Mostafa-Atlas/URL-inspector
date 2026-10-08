@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { ResultCard, diffResults, type Result } from './ResultCard';
+import { ResultCard, diffResults, type Diff, type Result } from './ResultCard';
 import { ExportButtons } from './export';
+import {
+  clearHistory,
+  findPrevious,
+  loadHistory,
+  saveHistory,
+  type HistoryEntry,
+} from './history';
 
 function parseHeaderLines(text: string): Record<string, string> {
   const out: Record<string, string> = {};
@@ -47,6 +54,8 @@ export default function App() {
   const [error2, setError2] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState(false);
+  const [history, setHistory] = useState<HistoryEntry[]>(() => loadHistory());
+  const [lastDiff, setLastDiff] = useState<{ at: number; rows: Diff[] } | null>(null);
   const ranShared = useRef(false);
 
   useEffect(() => {
@@ -69,14 +78,41 @@ export default function App() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function runOne(target: string) {
+  async function runOne(target: string, m = method, h?: Record<string, string>, b = bodyText) {
     const { ok, data } = await fetchInspect(target, {
-      method,
-      headers: parseHeaderLines(headerText),
-      body: bodyText,
+      method: m,
+      headers: h ?? parseHeaderLines(headerText),
+      body: b,
     });
     if (!ok) throw new Error(data.error || 'Something went wrong.');
     return data as Result;
+  }
+
+  function record(result: Result) {
+    const entry: HistoryEntry = {
+      url: result.url,
+      method: result.method,
+      time: Date.now(),
+      status: result.status,
+      statusText: result.statusText,
+      ok: result.ok,
+      contentType: result.contentType,
+      server: result.server,
+      sizeBytes: result.sizeBytes,
+      redirectCount: result.redirectCount,
+      pageTitle: result.pageTitle,
+      responseTimeMs: result.responseTimeMs,
+    };
+    const prev = findPrevious(loadHistory(), entry.url, entry.method, entry.time);
+    setHistory(saveHistory(entry));
+    return prev;
+  }
+
+  async function inspectSingle(target: string, m: string, h: Record<string, string>, b: string) {
+    const r = await runOne(target, m, h, b);
+    setResult(r);
+    const prev = record(r);
+    setLastDiff(prev ? { at: prev.time, rows: diffResults(prev, r) } : null);
   }
 
   async function onInspect(e: React.FormEvent) {
@@ -87,15 +123,25 @@ export default function App() {
     setError2(null);
     setResult(null);
     setResult2(null);
+    setLastDiff(null);
     try {
       if (mode === 'compare') {
-        const [ra, rb] = await Promise.allSettled([runOne(url), runOne(url2)]);
-        if (ra.status === 'fulfilled') setResult(ra.value);
-        else setError(ra.reason instanceof Error ? ra.reason.message : 'Request failed.');
-        if (rb.status === 'fulfilled') setResult2(rb.value);
-        else setError2(rb.reason instanceof Error ? rb.reason.message : 'Request failed.');
+        const h = parseHeaderLines(headerText);
+        const [ra, rb] = await Promise.allSettled([
+          runOne(url, method, h, bodyText),
+          runOne(url2, method, h, bodyText),
+        ]);
+        if (ra.status === 'fulfilled') {
+          setResult(ra.value);
+          record(ra.value);
+        } else setError(ra.reason instanceof Error ? ra.reason.message : 'Request failed.');
+        if (rb.status === 'fulfilled') {
+          setResult2(rb.value);
+          record(rb.value);
+        } else setError2(rb.reason instanceof Error ? rb.reason.message : 'Request failed.');
+        setHistory(loadHistory());
       } else {
-        setResult(await runOne(url));
+        await inspectSingle(url, method, parseHeaderLines(headerText), bodyText);
       }
     } catch (err) {
       if (err instanceof TypeError || err instanceof SyntaxError) {
@@ -103,6 +149,24 @@ export default function App() {
       } else {
         setError(err instanceof Error ? err.message : 'The server could not reach this address.');
       }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function reinspect(entry: HistoryEntry) {
+    setMode('single');
+    setUrl(entry.url);
+    setMethod(entry.method);
+    setTouched(true);
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    setLastDiff(null);
+    try {
+      await inspectSingle(entry.url, entry.method, {}, '');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'The server could not reach this address.');
     } finally {
       setLoading(false);
     }
@@ -188,6 +252,35 @@ export default function App() {
           />
         </label>
       </details>
+      {history.length > 0 && (
+        <details className="opts">
+          <summary>History ({history.length})</summary>
+          <ul className="checks">
+            {history.map((h) => (
+              <li key={`${h.time}-${h.url}`}>
+                <span className={h.ok ? 'good' : 'missing'}>
+                  {h.status} {h.statusText}
+                </span>{' '}
+                <code>{h.method}</code> <code>{h.url}</code>
+                <br />
+                <span className="hint">{new Date(h.time).toLocaleString()}</span>{' '}
+                <button type="button" onClick={() => void reinspect(h)}>
+                  Re-inspect
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={() => {
+              clearHistory();
+              setHistory([]);
+            }}
+          >
+            Clear history
+          </button>
+        </details>
+      )}
 
       {error && (
         <p className="error" role="alert">
@@ -202,6 +295,24 @@ export default function App() {
       {mode === 'compare' && error2 && (
         <p className="error" role="alert">
           Second URL: {error2}
+        </p>
+      )}
+
+      {lastDiff && lastDiff.rows.length > 0 && (
+        <section className="card">
+          <h2 className="card-title">Since {new Date(lastDiff.at).toLocaleString()}</h2>
+          <ul className="checks">
+            {lastDiff.rows.map((d) => (
+              <li key={d.label}>
+                <strong>{d.label}:</strong> <code>{d.a}</code> vs <code>{d.b}</code>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {lastDiff && lastDiff.rows.length === 0 && (
+        <p className="hint">
+          No changes since {new Date(lastDiff.at).toLocaleString()}.
         </p>
       )}
 
