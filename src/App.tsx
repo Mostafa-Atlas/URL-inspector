@@ -65,7 +65,7 @@ export default function App() {
         if (ok) setResult(data as Result);
         else setError(data.error || 'Something went wrong.');
       })
-      .catch(() => setError('The server could not reach this address.'))
+      .catch(() => setError('Could not reach the inspection service.'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -98,7 +98,11 @@ export default function App() {
         setResult(await runOne(url));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'The server could not reach this address.');
+      if (err instanceof TypeError || err instanceof SyntaxError) {
+        setError('Could not reach the inspection service.');
+      } else {
+        setError(err instanceof Error ? err.message : 'The server could not reach this address.');
+      }
     } finally {
       setLoading(false);
     }
