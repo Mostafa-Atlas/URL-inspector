@@ -4,13 +4,13 @@ A small tool for checking what a URL returns. It lives in the terminal by defaul
 
 ## Features
 
-Shows status code, timing breakdown (DNS lookup, wait for headers, body download, total), redirect chain, content type, size, server header and resolved IP addresses when present, page title and a 2 KB body preview for text pages, security headers, caching and compression headers, cookies, TLS certificate expiry for HTTPS sites, final URL after redirects, and the full response headers. Errors are plain sentences like "Invalid URL" or "The request timed out."
+It shows the status code, a timing breakdown (DNS lookup, wait for headers, body download, total), the redirect chain, content type, size, and the final URL after redirects. When present, it also shows the server header and resolved IP addresses. For text pages it adds the page title and a 2 KB body preview. It reports security headers, caching and compression headers, cookies, and TLS certificate expiry for HTTPS sites, plus the full response headers. Errors are plain sentences like "Invalid URL" or "The request timed out."
 
 Compare mode inspects two URLs side by side and lists what differs. Request options allow other methods (POST, PUT, PATCH, DELETE, HEAD, OPTIONS), up to 10 custom headers, and a small body. Results can be downloaded as JSON, copied as cURL, or shared with a link. The dashboard keeps the last 20 inspections in your own browser storage, with one click re-inspection and a note when something changed since your last visit. It has a dark mode toggle that follows your system setting until you pick one.
 
 ## Layout
 
-The CLI is the project. The web dashboard lives in `demo/` on its own so it can deploy alone.
+The CLI is the main project. The web dashboard sits in `demo/`, separate from it, so it can deploy by itself.
 
 ```text
 bin/    the CLI and the local dashboard server
@@ -53,11 +53,11 @@ The same inspector runs in the terminal. It needs Node 22 or newer.
 ./bin/http-inspector.mjs --dashboard --port 8080
 ```
 
-The dashboard keeps the same blocks as production. Only the direct CLI call accepts `--allow-private`, which is meant for testing your own services.
+The dashboard applies the same blocks as production. Only the direct CLI call accepts `--allow-private`, which is meant for testing your own services.
 
 ## Windows
 
-The examples above use `./bin/...`, which is Mac and Linux syntax. On Windows open PowerShell or Command Prompt in the project folder and put `node` in front:
+The examples above use `./bin/...`, which is Mac and Linux syntax. On Windows, open PowerShell or Command Prompt in the project folder and put `node` in front:
 
 ```bash
 node bin/http-inspector.mjs https://example.com
@@ -76,7 +76,7 @@ The frontend is React plus Vite with plain CSS. The browser never fetches the ta
 
 ## Deployment
 
-The demo deploys on its own. In Vercel set the project's Root Directory to `demo/` and leave the rest default: the build is `tsc --noEmit && vite build` and `demo/api` becomes the functions. There are no environment variables and nothing secret in the repo.
+The demo deploys separately from the CLI. In Vercel, set the project's Root Directory to `demo/` and leave everything else at the default: the build is `tsc --noEmit && vite build` and `demo/api` becomes the functions. There are no environment variables and nothing secret in the repo.
 
 ## Security
 
@@ -91,14 +91,13 @@ Because anyone can pass in a URL, the endpoint has basic guards:
 - request bodies capped at 100 KB and rejected on GET and HEAD
 - generic error messages, no stack traces
 
-Rate limiting is not included. On serverless that needs shared storage, which felt too heavy for this demo. If you put this online, add it at the edge or in front of the function.
+There is no rate limiting. On serverless it needs shared storage, which felt too heavy for this demo. If you put this online, add rate limiting at the edge or in front of the function.
 
-This is reasonable protection for a demo, not a guarantee. DNS rebinding between the check and the fetch is still possible. Do not point this at anything sensitive or use it as a general proxy.
+This is reasonable protection for a demo, with no guarantee. DNS rebinding between the check and the fetch is still possible. Do not point this at anything sensitive or use it as a general proxy.
 
 ## Limitations
 
 Response bodies show a 2 KB preview. Redirect chains stop at 5. Timeouts and size caps are fixed. IPv6 blocking covers common private ranges.
-
 
 ## Images
 
